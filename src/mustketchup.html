@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Must Ketchup - Schedule Hangouts!</title>
+    <link rel="stylesheet" href="css/mustketchup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <div class="logos-wrapper">
+                    <span class="logo">🍅</span>
+                </div>
+                <h1>Must Ketchup</h1>
+                <div class="logos-wrapper">
+                    <span class="logo">🌭</span>
+                </div>
+            </div>
+            <div class="hero-image">
+                <img src="image/hotdog1770505755.png" alt="Must Ketchup" />
+            </div>
+        </header>
+
+        <div class="view-toggle">
+            <button id="createBtn" class="active" onclick="switchView('create')">
+                🍅 Create New Event
+            </button>
+            <button id="joinBtn" class="secondary" onclick="switchView('join')">
+                🌭 Join Event
+            </button>
+            <button id="reservationBtn" class="secondary" onclick="switchView('reservation')">
+                🍔 Make A Reservation
+            </button>
+        </div>
+
+        <!-- Create Event View -->
+        <div id="createView">
+            <div class="card">
+                <h2><span class="emoji">📅</span> Create Your Event</h2>
+                
+                <div class="input-group">
+                    <label>Event Name</label>
+                    <input type="text" id="eventName" placeholder="e.g., Weekend Brunch, Game Night">
+                </div>
+
+                <div class="input-group">
+                    <label>Your Name</label>
+                    <input type="text" id="creatorName" placeholder="Enter your name">
+                </div>
+
+                <div class="input-group">
+                    <label>Event Dates</label>
+                    <div class="date-selector">
+                        <input type="date" id="startDate">
+                        <span style="align-self: center;">to</span>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Time Range</label>
+                    <div class="time-range-selector">
+                        <input type="time" id="eventStartTime" value="09:00">
+                        <span>to</span>
+                        <input type="time" id="eventEndTime" value="17:00">
+                    </div>
+                    <small style="color: #666;">Time slots will be created in 30-minute intervals</small>
+                </div>
+
+                <button class="primary" onclick="createNewEvent()">
+                    🎉 Create Event & Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Join Event View -->
+        <div id="joinView" class="hidden">
+            <div id="successMessage" class="success-message hidden"></div>
+            
+            <div class="card">
+                <h2><span class="emoji">👥</span> Join Event</h2>
+                
+                <div class="input-group">
+                    <label>Event ID</label>
+                    <input type="text" id="eventId" placeholder="Enter event ID">
+                </div>
+
+                <div class="input-group">
+                    <label>Your Name</label>
+                    <input type="text" id="participantName" placeholder="Enter your name">
+                </div>
+
+                <div class="input-group">
+                    <label>Your Email</label>
+                    <input type="email" id="participantEmail" placeholder="Enter your email">
+                </div>
+
+                <button class="primary" onclick="loadEvent()">
+                    🔍 Load Event
+                </button>
+            </div>
+
+            <div id="eventDetails" class="hidden">
+                <div class="card">
+                    <h2><span class="emoji">📋</span> <span id="displayEventName"></span></h2>
+                    
+                    <div class="participant-list" id="participantList"></div>
+
+                    <div class="info-box">
+                        <strong>💡 How to select your availability:</strong>
+                        Click and drag across the time slots when you're available. Click again to deselect. Darker colors show when more people are available!
+                    </div>
+
+                    <div class="schedule-grid">
+                        <table id="scheduleTable"></table>
+                    </div>
+
+                    <button class="primary" onclick="saveAvailability()" style="margin-top: 20px;">
+                        💾 Save My Availability
+                    </button>
+
+                    <div class="share-section">
+                        <h3 style="color: #D32F2F; margin-bottom: 10px;">📤 Share This Event</h3>
+                        <div class="share-link">
+                            <input type="text" id="shareLink" readonly>
+                            <button class="secondary" onclick="copyShareLink()">📋 Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reservation View -->
+        <div id="reservationView" class="hidden">
+            <div id="successMessage" class="success-message hidden"></div>
+            <div class="card">
+                <h2><span class="emoji">📞</span> Make a Reservation</h2>
+
+                <div class="input-group">
+                    <label>Meeting Time</label>
+                    <input type="datetime-local" id="confirmTime">
+                </div>
+
+                <div class="input-group">
+                    <label>Restaurant Name</label>
+                    <input type="text" id="confirmRestaurant" placeholder="e.g., Sunflower Bistro">
+                </div>
+
+                <div class="input-group">
+                    <label>Restaurant Address</label>
+                    <input type="text" id="confirmAddress" placeholder="e.g., 123 Main St, Cityville">
+                </div>
+
+                <button class="primary" onclick="submitConfirmation()">
+                    ✅ Confirm Reservation
+                </button>
+
+                <div id="confirmMessage" class="success-message hidden" style="margin-top: 12px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DatabaseService {
+            constructor() {
+                this.API_BASE = 'http://localhost:3000/api';
+            }
+
+            async saveEvent(event) {
+                const response = await fetch(`${this.API_BASE}/events`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(event)
+                });
+                return await response.json();
+            }
+            async getEvent(eventId) {
+                const response = await fetch(`${this.API_BASE}/events/${eventId}`);
+                if (response.status === 404) return null;
+                return await response.json();
+            }
+
+            async addParticipantAvailability(eventId, participantName, participantEmail, availability) {
+                const response = await fetch(`${this.API_BASE}/events/${eventId}/availability`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: participantName,
+                        email: participantEmail,
+                        availability: availability
+                    })
+                });
+                return await response.json();
+            }
+        }
+
+        const db = new DatabaseService();
+        let currentEvent = null;
+        let currentParticipant = null;
+        let currentParticipantEmail = null;
+        let selectedSlots = new Set();
+        let isDragging = false;
+        let dragMode = null; 
+
+        function switchView(view) {
+            const createView = document.getElementById('createView');
+            const joinView = document.getElementById('joinView');
+            const reservationView = document.getElementById('reservationView');
+            const createBtn = document.getElementById('createBtn');
+            const joinBtn = document.getElementById('joinBtn');
+            const reservationBtn = document.getElementById('reservationBtn');
+
+            createView.classList.add('hidden');
+            joinView.classList.add('hidden');
+            reservationView.classList.add('hidden');
+            createBtn.classList.remove('active');
+            joinBtn.classList.remove('active');
+            reservationBtn.classList.remove('active');
+
+            if (view === 'create') {
+                createView.classList.remove('hidden');
+                createBtn.classList.add('active');
+            } else if (view === 'join') {
+                joinView.classList.remove('hidden');
+                joinBtn.classList.add('active');
+            } else if (view === 'reservation') {
+                reservationView.classList.remove('hidden');
+                reservationBtn.classList.add('active');
+            }
+        }
+
+        function generateTimeSlots(startTime, endTime) {
+            const slots = [];
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            
+            let currentHour = startHour;
+            let currentMin = startMin;
+            
+            while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+                const start = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+                
+                currentMin += 30;
+                if (currentMin >= 60) {
+                    currentMin = 0;
+                    currentHour++;
+                }
+                
+                const end = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+                slots.push({ start, end });
+            }
+            
+            return slots;
+        }
+
+        function generateEventId() {
+            return 'event_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        async function createNewEvent() {
+            const eventName = document.getElementById('eventName').value;
+            const creatorName = document.getElementById('creatorName').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const eventStartTime = document.getElementById('eventStartTime').value;
+            const eventEndTime = document.getElementById('eventEndTime').value;
+
+            if (!eventName || !creatorName || !startDate || !endDate || !eventStartTime || !eventEndTime) {
+                alert('Please fill in all fields!');
+                return;
+            }
+
+            const dates = [];
+            let currentDate = new Date(startDate);
+            const lastDate = new Date(endDate);
+            
+            while (currentDate <= lastDate) {
+                dates.push(new Date(currentDate).toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            const timeSlots = generateTimeSlots(eventStartTime, eventEndTime);
+
+            const eventId = generateEventId();
+            const event = {
+                eventId,
+                eventName,
+                creatorName,
+                dates,
+                timeSlots,
+                participants: []
+            };
+
+            try {
+                const result = await db.saveEvent(event);
+                
+                if (result.success) {
+                    document.getElementById('eventId').value = eventId;
+                    document.getElementById('participantName').value = creatorName;
+                    switchView('join');
+                    await loadEvent();
+                } else {
+                    alert('Failed to create event: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to connect to server. Make sure Flask is running on port 3000.');
+            }
+        }
+
+        async function loadEvent() {
+            const eventId = document.getElementById('eventId').value;
+            const participantName = document.getElementById('participantName').value;
+            const participantEmail = document.getElementById('participantEmail').value;
+
+            if (!eventId || !participantName || !participantEmail) {
+                alert('Please enter event ID, your name, and your email!');
+                return;
+            }
+
+            const event = await db.getEvent(eventId);
+            if (!event) {
+                alert('Event not found! Please check the event ID.');
+                return;
+            }
+
+            currentEvent = event;
+            currentParticipant = participantName;
+            currentParticipantEmail = participantEmail;
+            selectedSlots.clear();
+
+            const existingParticipant = event.participants.find(p => p.name === participantName || p.email === participantEmail);
+            if (existingParticipant) {
+                existingParticipant.availability.forEach(slot => {
+                    selectedSlots.add(`${slot.date}_${slot.time}`);
+                });
+            }
+
+            displayEvent(event);
+        }
+
+        function displayEvent(event) {
+            document.getElementById('displayEventName').textContent = event.eventName;
+            document.getElementById('eventDetails').classList.remove('hidden');
+            
+            const participantList = document.getElementById('participantList');
+            participantList.innerHTML = event.participants.map(p => `
+                <div class="participant">
+                    <span class="emoji">👤</span>
+                    <span>${p.name}</span>
+                </div>
+            `).join('');
+
+            createScheduleGrid(event);
+
+            const shareLink = `${window.location.origin}${window.location.pathname}?event=${event.eventId}`;
+            document.getElementById('shareLink').value = shareLink;
+        }
+
+        function createScheduleGrid(event) {
+            const table = document.getElementById('scheduleTable');
+            table.innerHTML = '';
+
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th>Time</th>';
+            event.dates.forEach(date => {
+                const dateObj = new Date(date + 'T00:00:00');
+                const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                headerRow.innerHTML += `<th>${formattedDate}</th>`;
+            });
+            table.appendChild(headerRow);
+
+            event.timeSlots.forEach(slot => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="time-label">${slot.start}</td>`;
+                
+                event.dates.forEach(date => {
+                    const cellId = `${date}_${slot.start}`;
+                    const isSelected = selectedSlots.has(cellId);
+                    
+                    const availableCount = event.participants.filter(p => 
+                        p.availability.some(a => a.date === date && a.time === slot.start)
+                    ).length;
+
+                    const td = document.createElement('td');
+                    td.className = 'selectable';
+                    td.dataset.cell = cellId;
+                    
+                    if (isSelected) {
+                        td.classList.add('selected');
+                    } else if (availableCount > 0) {
+                        td.classList.add('available');
+                        td.style.opacity = 0.3 + (availableCount / Math.max(event.participants.length, 1)) * 0.7;
+                    }
+                    
+                    if (availableCount > 0 || isSelected) {
+                        const content = document.createElement('div');
+                        content.className = 'cell-content';
+                        content.innerHTML = `
+                            <div>${availableCount > 0 ? availableCount : '✓'}</div>
+                            ${availableCount > 0 ? `<div class="availability-count">avail</div>` : ''}
+                        `;
+                        td.appendChild(content);
+                    }
+                    
+                    td.addEventListener('mousedown', (e) => handleMouseDown(e, cellId));
+                    td.addEventListener('mouseenter', (e) => handleMouseEnter(e, cellId));
+                    td.addEventListener('mouseup', handleMouseUp);
+                    
+                    td.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        handleMouseDown(e, cellId);
+                    });
+                    td.addEventListener('touchmove', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        if (element && element.dataset.cell) {
+                            handleMouseEnter(e, element.dataset.cell);
+                        }
+                    });
+                    td.addEventListener('touchend', handleMouseUp);
+                    
+                    row.appendChild(td);
+                });
+                
+                table.appendChild(row);
+            });
+
+            document.addEventListener('mouseup', handleMouseUp);
+        }
+
+        function handleMouseDown(e, cellId) {
+            isDragging = true;
+            dragMode = selectedSlots.has(cellId) ? 'deselect' : 'select';
+            toggleSlot(cellId, dragMode);
+        }
+
+        function handleMouseEnter(e, cellId) {
+            if (isDragging) {
+                toggleSlot(cellId, dragMode);
+            }
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+            dragMode = null;
+        }
+
+        function toggleSlot(cellId, mode = null) {
+            if (mode === 'select') {
+                selectedSlots.add(cellId);
+            } else if (mode === 'deselect') {
+                selectedSlots.delete(cellId);
+            } else {
+                if (selectedSlots.has(cellId)) {
+                    selectedSlots.delete(cellId);
+                } else {
+                    selectedSlots.add(cellId);
+                }
+            }
+            displayEvent(currentEvent);
+        }
+
+        async function saveAvailability() {
+            if (!currentParticipantEmail) {
+                alert('Please enter your email!');
+                return;
+            }
+
+            const availability = Array.from(selectedSlots).map(slot => {
+                const [date, time] = slot.split('_');
+                return { date, time };
+            });
+
+            try {
+                const result = await db.addParticipantAvailability(
+                    currentEvent.eventId,
+                    currentParticipant,
+                    currentParticipantEmail,
+                    availability
+                );
+
+                if (result.success) {
+                    currentEvent = await db.getEvent(currentEvent.eventId);
+                    displayEvent(currentEvent);
+
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.textContent = 'Your availability has been saved!';
+                    successMsg.classList.remove('hidden');
+                    setTimeout(() => successMsg.classList.add('hidden'), 3000);
+                } else {
+                    alert('Failed to save: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to save availability. Check your connection.');
+            }
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareLink');
+            input.select();
+            document.execCommand('copy');
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = originalText, 2000);
+        }
+
+        async function submitConfirmation() {
+            const time = document.getElementById('confirmTime').value;
+            const address = document.getElementById('confirmAddress').value;
+            const email = document.getElementById('confirmEmail').value;
+            const restaurant = document.getElementById('confirmRestaurant').value;
+            const phone = document.getElementById('confirmPhone').value;
+
+            if (!time || !address || !email || !restaurant || !phone) {
+                alert('Please fill in all fields!');
+                return;
+            }
+
+            const msg = document.getElementById('confirmMessage');
+            msg.textContent = 'Request submitted. This demo does not place calls or send emails without a server.';
+            msg.classList.remove('hidden');
+        }
+
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            
+            if (eventId) {
+                document.getElementById('eventId').value = eventId;
+                switchView('join');
+            }
+
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            
+            document.getElementById('startDate').value = today.toISOString().split('T')[0];
+            document.getElementById('endDate').value = nextWeek.toISOString().split('T')[0];
+        };
+    </script>
+</body>
+</html>
