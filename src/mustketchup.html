@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Must Ketchup - Schedule Hangouts!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #FFF4E6 0%, #FFE4E1 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 10px;
+        }
+
+        .logo {
+            font-size: 48px;
+        }
+
+        h1 {
+            color: #D32F2F;
+            font-size: 48px;
+            margin: 0;
+        }
+
+        .tagline {
+            color: #F57C00;
+            font-size: 18px;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        .illustration {
+            font-size: 80px;
+            margin: 20px 0;
+            animation: bounce 2s ease-in-out infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .view-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .view-toggle button {
+            padding: 12px 30px;
+            font-size: 16px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .view-toggle button.active {
+            background: linear-gradient(135deg, #D32F2F, #F57C00);
+            color: white;
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+        }
+
+        .view-toggle button:not(.active) {
+            background: white;
+            color: #D32F2F;
+            border: 2px solid #D32F2F;
+        }
+
+        .view-toggle button:not(.active):hover {
+            background: #FFF4E6;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+
+        .card h2 {
+            color: #D32F2F;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input[type="text"],
+        input[type="date"],
+        input[type="time"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #FFE4E1;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #D32F2F;
+        }
+
+        .time-slots {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .time-slot {
+            padding: 8px 16px;
+            background: #FFF4E6;
+            border: 2px solid #F57C00;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .remove-slot {
+            background: #D32F2F;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        button.primary {
+            background: linear-gradient(135deg, #D32F2F, #F57C00);
+            color: white;
+            border: none;
+            padding: 14px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
+            transition: transform 0.2s;
+        }
+
+        button.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(211, 47, 47, 0.4);
+        }
+
+        button.secondary {
+            background: white;
+            color: #D32F2F;
+            border: 2px solid #D32F2F;
+            padding: 14px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-left: 10px;
+        }
+
+        button.secondary:hover {
+            background: #FFF4E6;
+        }
+
+        .schedule-grid {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 600px;
+        }
+
+        th {
+            background: linear-gradient(135deg, #D32F2F, #F57C00);
+            color: white;
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #FFE4E1;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        td.time-label {
+            background: #FFF4E6;
+            font-weight: 600;
+            color: #D32F2F;
+            cursor: default;
+        }
+
+        td.selectable {
+            background: white;
+        }
+
+        td.selectable:hover {
+            background: #FFF4E6;
+        }
+
+        td.selected {
+            background: #D32F2F !important;
+            color: white;
+        }
+
+        td.available {
+            background: linear-gradient(135deg, rgba(211, 47, 47, 0.7), rgba(245, 124, 0, 0.7));
+            color: white;
+            font-weight: 600;
+        }
+
+        .availability-count {
+            font-size: 12px;
+            margin-top: 4px;
+        }
+
+        .share-section {
+            background: #FFF4E6;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .share-link {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .share-link input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #F57C00;
+            border-radius: 10px;
+        }
+
+        .participant-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .participant {
+            background: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            border: 2px solid #F57C00;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .date-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .date-selector input {
+            flex: 1;
+        }
+
+        .emoji {
+            font-size: 24px;
+        }
+
+        .success-message {
+            background: #4CAF50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 32px;
+            }
+            
+            .illustration {
+                font-size: 60px;
+            }
+            
+            .view-toggle {
+                flex-direction: column;
+            }
+            
+            .view-toggle button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <span class="logo">🌭</span>
+                <h1>Must Ketchup</h1>
+                <span class="logo">🍔</span>
+            </div>
+            <div class="tagline">Let's catch up and ketchup! 🍅✨</div>
+            <div class="illustration">🌭❤️</div>
+        </header>
+
+        <div class="view-toggle">
+            <button id="createBtn" class="active" onclick="switchView('create')">
+                🍅 Create New Event
+            </button>
+            <button id="joinBtn" onclick="switchView('join')">
+                🌭 Join Event
+            </button>
+        </div>
+
+        <!-- Create Event View -->
+        <div id="createView">
+            <div class="card">
+                <h2><span class="emoji">📅</span> Create Your Event</h2>
+                
+                <div class="input-group">
+                    <label>Event Name</label>
+                    <input type="text" id="eventName" placeholder="e.g., Weekend Brunch, Game Night">
+                </div>
+
+                <div class="input-group">
+                    <label>Your Name</label>
+                    <input type="text" id="creatorName" placeholder="Enter your name">
+                </div>
+
+                <div class="input-group">
+                    <label>Event Dates</label>
+                    <div class="date-selector">
+                        <input type="date" id="startDate">
+                        <span style="align-self: center;">to</span>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Time Slots (Add possible meeting times)</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <input type="time" id="startTime" value="09:00">
+                        <span style="align-self: center;">to</span>
+                        <input type="time" id="endTime" value="17:00">
+                        <button class="secondary" onclick="addTimeSlot()">Add</button>
+                    </div>
+                    <div class="time-slots" id="timeSlots"></div>
+                </div>
+
+                <button class="primary" onclick="createEvent()">
+                    🎉 Create Event & Share
+                </button>
+            </div>
+        </div>
+
+        <!-- Join Event View -->
+        <div id="joinView" class="hidden">
+            <div id="successMessage" class="success-message hidden"></div>
+            
+            <div class="card">
+                <h2><span class="emoji">👥</span> Join Event</h2>
+                
+                <div class="input-group">
+                    <label>Event ID</label>
+                    <input type="text" id="eventId" placeholder="Enter event ID">
+                </div>
+
+                <div class="input-group">
+                    <label>Your Name</label>
+                    <input type="text" id="participantName" placeholder="Enter your name">
+                </div>
+
+                <button class="primary" onclick="loadEvent()">
+                    🔍 Load Event
+                </button>
+            </div>
+
+            <div id="eventDetails" class="hidden">
+                <div class="card">
+                    <h2><span class="emoji">📋</span> <span id="displayEventName"></span></h2>
+                    
+                    <div class="participant-list" id="participantList"></div>
+
+                    <h3 style="margin-top: 30px; margin-bottom: 15px; color: #D32F2F;">
+                        Select Your Availability
+                    </h3>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Click on the time slots when you're available. Darker colors = more people available!
+                    </p>
+
+                    <div class="schedule-grid">
+                        <table id="scheduleTable"></table>
+                    </div>
+
+                    <button class="primary" onclick="saveAvailability()" style="margin-top: 20px;">
+                        💾 Save My Availability
+                    </button>
+
+                    <div class="share-section">
+                        <h3 style="color: #D32F2F; margin-bottom: 10px;">📤 Share This Event</h3>
+                        <div class="share-link">
+                            <input type="text" id="shareLink" readonly>
+                            <button class="secondary" onclick="copyShareLink()">📋 Copy</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // MongoDB-ready data structure
+        /* 
+        MongoDB Schema would look like:
+        
+        Event Collection:
+        {
+            _id: ObjectId,
+            eventId: String (unique),
+            eventName: String,
+            creatorName: String,
+            dates: [Date],
+            timeSlots: [{start: String, end: String}],
+            participants: [{
+                name: String,
+                availability: [{date: String, time: String}]
+            }],
+            createdAt: Date,
+            updatedAt: Date
+        }
+        */
+
+        // Simulated database (replace with MongoDB API calls)
+        class DatabaseService {
+            constructor() {
+                // In production, this would be replaced with MongoDB API endpoints
+                this.storageKey = 'mustKetchupEvents';
+            }
+
+            // CREATE - Save new event (would be POST /api/events)
+            async saveEvent(event) {
+                const events = this.getAllEvents();
+                events[event.eventId] = event;
+                localStorage.setItem(this.storageKey, JSON.stringify(events));
+                return event;
+            }
+
+            // READ - Get event by ID (would be GET /api/events/:id)
+            async getEvent(eventId) {
+                const events = this.getAllEvents();
+                return events[eventId] || null;
+            }
+
+            // UPDATE - Update event (would be PUT /api/events/:id)
+            async updateEvent(eventId, updatedData) {
+                const events = this.getAllEvents();
+                if (events[eventId]) {
+                    events[eventId] = { ...events[eventId], ...updatedData };
+                    localStorage.setItem(this.storageKey, JSON.stringify(events));
+                    return events[eventId];
+                }
+                return null;
+            }
+
+            // Helper to get all events
+            getAllEvents() {
+                const data = localStorage.getItem(this.storageKey);
+                return data ? JSON.parse(data) : {};
+            }
+
+            // Add participant availability (would be POST /api/events/:id/availability)
+            async addParticipantAvailability(eventId, participantName, availability) {
+                const event = await this.getEvent(eventId);
+                if (!event) return null;
+
+                // Remove existing participant if updating
+                event.participants = event.participants.filter(p => p.name !== participantName);
+                
+                // Add new participant data
+                event.participants.push({
+                    name: participantName,
+                    availability: availability
+                });
+
+                return await this.updateEvent(eventId, event);
+            }
+        }
+
+        const db = new DatabaseService();
+        let currentEvent = null;
+        let currentParticipant = null;
+        let selectedSlots = new Set();
+
+        function switchView(view) {
+            const createView = document.getElementById('createView');
+            const joinView = document.getElementById('joinView');
+            const createBtn = document.getElementById('createBtn');
+            const joinBtn = document.getElementById('joinBtn');
+
+            if (view === 'create') {
+                createView.classList.remove('hidden');
+                joinView.classList.add('hidden');
+                createBtn.classList.add('active');
+                joinBtn.classList.remove('active');
+            } else {
+                createView.classList.add('hidden');
+                joinView.classList.remove('hidden');
+                createBtn.classList.remove('active');
+                joinBtn.classList.add('active');
+            }
+        }
+
+        function addTimeSlot() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+
+            if (!startTime || !endTime) {
+                alert('Please select both start and end times!');
+                return;
+            }
+
+            const container = document.getElementById('timeSlots');
+            const slot = document.createElement('div');
+            slot.className = 'time-slot';
+            slot.innerHTML = `
+                <span>${startTime} - ${endTime}</span>
+                <button class="remove-slot" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(slot);
+        }
+
+        function generateEventId() {
+            return 'event_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        function createEvent() {
+            const eventName = document.getElementById('eventName').value;
+            const creatorName = document.getElementById('creatorName').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const timeSlots = Array.from(document.querySelectorAll('.time-slot span')).map(s => {
+                const [start, end] = s.textContent.split(' - ');
+                return { start, end };
+            });
+
+            if (!eventName || !creatorName || !startDate || !endDate || timeSlots.length === 0) {
+                alert('Please fill in all fields and add at least one time slot!');
+                return;
+            }
+
+            // Generate dates array
+            const dates = [];
+            let currentDate = new Date(startDate);
+            const lastDate = new Date(endDate);
+            
+            while (currentDate <= lastDate) {
+                dates.push(new Date(currentDate).toISOString().split('T')[0]);
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+
+            const eventId = generateEventId();
+            const event = {
+                eventId,
+                eventName,
+                creatorName,
+                dates,
+                timeSlots,
+                participants: [],
+                createdAt: new Date().toISOString()
+            };
+
+            db.saveEvent(event);
+
+            // Switch to join view and load the event
+            document.getElementById('eventId').value = eventId;
+            switchView('join');
+            loadEvent();
+        }
+
+        async function loadEvent() {
+            const eventId = document.getElementById('eventId').value;
+            const participantName = document.getElementById('participantName').value;
+
+            if (!eventId || !participantName) {
+                alert('Please enter both event ID and your name!');
+                return;
+            }
+
+            const event = await db.getEvent(eventId);
+            if (!event) {
+                alert('Event not found! Please check the event ID.');
+                return;
+            }
+
+            currentEvent = event;
+            currentParticipant = participantName;
+            selectedSlots.clear();
+
+            // Load existing availability for this participant
+            const existingParticipant = event.participants.find(p => p.name === participantName);
+            if (existingParticipant) {
+                existingParticipant.availability.forEach(slot => {
+                    selectedSlots.add(`${slot.date}_${slot.time}`);
+                });
+            }
+
+            displayEvent(event);
+        }
+
+        function displayEvent(event) {
+            document.getElementById('displayEventName').textContent = event.eventName;
+            document.getElementById('eventDetails').classList.remove('hidden');
+            
+            // Display participants
+            const participantList = document.getElementById('participantList');
+            participantList.innerHTML = event.participants.map(p => `
+                <div class="participant">
+                    <span class="emoji">👤</span>
+                    <span>${p.name}</span>
+                </div>
+            `).join('');
+
+            // Create schedule grid
+            createScheduleGrid(event);
+
+            // Set share link
+            const shareLink = `${window.location.origin}${window.location.pathname}?event=${event.eventId}`;
+            document.getElementById('shareLink').value = shareLink;
+        }
+
+        function createScheduleGrid(event) {
+            const table = document.getElementById('scheduleTable');
+            table.innerHTML = '';
+
+            // Header row with dates
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th>Time</th>';
+            event.dates.forEach(date => {
+                const dateObj = new Date(date + 'T00:00:00');
+                const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                    weekday: 'short', 
+                    month: 'short', 
+                    day: 'numeric' 
+                });
+                headerRow.innerHTML += `<th>${formattedDate}</th>`;
+            });
+            table.appendChild(headerRow);
+
+            // Time slot rows
+            event.timeSlots.forEach(slot => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="time-label">${slot.start} - ${slot.end}</td>`;
+                
+                event.dates.forEach(date => {
+                    const cellId = `${date}_${slot.start}`;
+                    const isSelected = selectedSlots.has(cellId);
+                    
+                    // Calculate how many people are available
+                    const availableCount = event.participants.filter(p => 
+                        p.availability.some(a => a.date === date && a.time === slot.start)
+                    ).length;
+
+                    const td = document.createElement('td');
+                    td.className = 'selectable';
+                    td.dataset.cell = cellId;
+                    
+                    if (isSelected) {
+                        td.classList.add('selected');
+                    } else if (availableCount > 0) {
+                        td.classList.add('available');
+                        td.style.opacity = 0.3 + (availableCount / event.participants.length) * 0.7;
+                    }
+                    
+                    if (availableCount > 0 || isSelected) {
+                        td.innerHTML = `
+                            <div>${availableCount > 0 ? availableCount : '✓'}</div>
+                            <div class="availability-count">${availableCount > 0 ? 'available' : ''}</div>
+                        `;
+                    }
+                    
+                    td.onclick = () => toggleSlot(cellId);
+                    row.appendChild(td);
+                });
+                
+                table.appendChild(row);
+            });
+        }
+
+        function toggleSlot(cellId) {
+            if (selectedSlots.has(cellId)) {
+                selectedSlots.delete(cellId);
+            } else {
+                selectedSlots.add(cellId);
+            }
+            displayEvent(currentEvent); // Refresh display
+        }
+
+        async function saveAvailability() {
+            const availability = Array.from(selectedSlots).map(slot => {
+                const [date, time] = slot.split('_');
+                return { date, time };
+            });
+
+            await db.addParticipantAvailability(
+                currentEvent.eventId,
+                currentParticipant,
+                availability
+            );
+
+            // Reload event to show updated data
+            currentEvent = await db.getEvent(currentEvent.eventId);
+            displayEvent(currentEvent);
+
+            // Show success message
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = '✅ Your availability has been saved!';
+            successMsg.classList.remove('hidden');
+            setTimeout(() => successMsg.classList.add('hidden'), 3000);
+        }
+
+        function copyShareLink() {
+            const input = document.getElementById('shareLink');
+            input.select();
+            document.execCommand('copy');
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            setTimeout(() => btn.textContent = originalText, 2000);
+        }
+
+        // Check URL for event parameter on load
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const eventId = urlParams.get('event');
+            
+            if (eventId) {
+                document.getElementById('eventId').value = eventId;
+                switchView('join');
+            }
+
+            // Set default dates
+            const today = new Date();
+            const nextWeek = new Date(today);
+            nextWeek.setDate(today.getDate() + 7);
+            
+            document.getElementById('startDate').value = today.toISOString().split('T')[0];
+            document.getElementById('endDate').value = nextWeek.toISOString().split('T')[0];
+        };
+    </script>
+</body>
+</html>
