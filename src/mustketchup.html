@@ -21,15 +21,24 @@
         .container {
             max-width: 1200px;
             margin: 0 auto;
+            
         }
 
         header {
             text-align: center;
             margin-bottom: 40px;
-            background: white;
+            background: #ffd553;
             padding: 30px;
             border-radius: 20px;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        .logos-wrapper {
+            display: flex;
+            justify-content: space-between;
+            width: 120px; 
+            margin: 0 auto 10px; 
+
         }
 
         .logo-container {
@@ -41,7 +50,12 @@
         }
 
         .logo {
+            animation: float 2s ease-in-out infinite;
             font-size: 48px;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
         }
 
         h1 {
@@ -61,6 +75,20 @@
             font-size: 80px;
             margin: 20px 0;
             animation: bounce 2s ease-in-out infinite;
+        }
+
+        /* Hero image below the title */
+        .hero-image {
+            margin-top: 12px;
+        }
+
+        .hero-image img {
+            display: block;
+            max-width: 320px;
+            width: 80%;
+            height: auto;
+            margin: 8px auto 0;
+            border-radius: 12px;
         }
 
         @keyframes bounce {
@@ -358,12 +386,17 @@
     <div class="container">
         <header>
             <div class="logo-container">
-                <span class="logo">🌭</span>
+                <div class="logos-wrapper">
+                    <span class="logo">🍅</span>
+                </div>
                 <h1>Must Ketchup</h1>
-                <span class="logo">🍔</span>
+                <div class="logos-wrapper">
+                    <span class="logo">🌭</span>
+                </div>
             </div>
-            <div class="tagline">Let's catch up and ketchup! 🍅✨</div>
-            <div class="illustration">🌭❤️</div>
+            <div class="hero-image">
+                <img src="image/hotdog1770505755.png" alt="Must Ketchup" />
+            </div>
         </header>
 
         <div class="view-toggle">
