@@ -59,6 +59,7 @@ def get_event(event_id):
 def update_availability(event_id):
     data = request.json
     participant_name = data.get('name')
+    participant_email = data.get('email')
     availability = data.get('availability', [])
     
     # Find the event
@@ -74,6 +75,7 @@ def update_availability(event_id):
     # Add updated participant
     participants.append({
         "name": participant_name,
+        "email": participant_email,
         "availability": availability
     })
     
