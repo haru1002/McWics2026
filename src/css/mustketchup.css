@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Chewy&display=swap');
+
 * {
     margin: 0;
     padding: 0;
@@ -50,10 +52,15 @@ header {
     50% { transform: translateY(-10px); }
 }
 
+
 h1 {
+    font-family: 'Chewy', cursive;
+    font-size: 4rem;
     color: #D32F2F;
-    font-size: 48px;
+    text-shadow: 3px 3px 0 #FF9800;
+    letter-spacing: 2px;
     margin: 0;
+    text-align: center;
 }
 
 .tagline {
