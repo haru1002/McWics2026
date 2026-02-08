@@ -171,36 +171,20 @@
             border-color: #D32F2F;
         }
 
-        .time-slots {
+        .time-range-selector {
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 20px;
+            align-items: center;
+            margin-bottom: 10px;
         }
 
-        .time-slot {
-            padding: 8px 16px;
-            background: #FFF4E6;
-            border: 2px solid #F57C00;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
+        .time-range-selector input {
+            flex: 1;
         }
 
-        .remove-slot {
-            background: #D32F2F;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            cursor: pointer;
-            font-size: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        .time-range-selector span {
+            color: #666;
+            font-weight: 600;
         }
 
         button.primary {
@@ -241,6 +225,7 @@
         .schedule-grid {
             overflow-x: auto;
             margin-top: 20px;
+            user-select: none;
         }
 
         table {
@@ -255,15 +240,19 @@
             padding: 15px 10px;
             text-align: center;
             font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         td {
-            padding: 10px;
+            padding: 0;
             text-align: center;
             border: 1px solid #FFE4E1;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.1s;
             position: relative;
+            height: 40px;
         }
 
         td.time-label {
@@ -271,6 +260,9 @@
             font-weight: 600;
             color: #D32F2F;
             cursor: default;
+            padding: 10px 5px;
+            font-size: 13px;
+            white-space: nowrap;
         }
 
         td.selectable {
@@ -292,9 +284,18 @@
             font-weight: 600;
         }
 
-        .availability-count {
+        .cell-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
             font-size: 12px;
-            margin-top: 4px;
+        }
+
+        .availability-count {
+            font-size: 10px;
+            margin-top: 2px;
         }
 
         .share-section {
@@ -362,6 +363,20 @@
             font-weight: 600;
         }
 
+        .info-box {
+            background: #E3F2FD;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #1976D2;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
         @media (max-width: 768px) {
             h1 {
                 font-size: 32px;
@@ -377,6 +392,15 @@
             
             .view-toggle button {
                 width: 100%;
+            }
+
+            td {
+                height: 35px;
+            }
+
+            td.time-label {
+                font-size: 11px;
+                padding: 8px 3px;
             }
         }
     </style>
@@ -432,17 +456,16 @@
                 </div>
 
                 <div class="input-group">
-                    <label>Time Slots (Add possible meeting times)</label>
-                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                        <input type="time" id="startTime" value="09:00">
-                        <span style="align-self: center;">to</span>
-                        <input type="time" id="endTime" value="17:00">
-                        <button class="secondary" onclick="addTimeSlot()">Add</button>
+                    <label>Time Range (What hours should be available?)</label>
+                    <div class="time-range-selector">
+                        <input type="time" id="eventStartTime" value="09:00">
+                        <span>to</span>
+                        <input type="time" id="eventEndTime" value="17:00">
                     </div>
-                    <div class="time-slots" id="timeSlots"></div>
+                    <small style="color: #666;">Time slots will be created in 30-minute intervals</small>
                 </div>
 
-                <button class="primary" onclick="createEvent()">
+                <button class="primary" onclick="createNewEvent()">
                     🎉 Create Event & Share
                 </button>
             </div>
@@ -476,12 +499,10 @@
                     
                     <div class="participant-list" id="participantList"></div>
 
-                    <h3 style="margin-top: 30px; margin-bottom: 15px; color: #D32F2F;">
-                        Select Your Availability
-                    </h3>
-                    <p style="color: #666; margin-bottom: 20px;">
-                        Click on the time slots when you're available. Darker colors = more people available!
-                    </p>
+                    <div class="info-box">
+                        <strong>💡 How to select your availability:</strong>
+                        Click and drag across the time slots when you're available. Click again to deselect. Darker colors show when more people are available!
+                    </div>
 
                     <div class="schedule-grid">
                         <table id="scheduleTable"></table>
@@ -585,6 +606,8 @@
         let currentEvent = null;
         let currentParticipant = null;
         let selectedSlots = new Set();
+        let isDragging = false;
+        let dragMode = null; // 'select' or 'deselect'
 
         function switchView(view) {
             const createView = document.getElementById('createView');
@@ -605,41 +628,45 @@
             }
         }
 
-        function addTimeSlot() {
-            const startTime = document.getElementById('startTime').value;
-            const endTime = document.getElementById('endTime').value;
-
-            if (!startTime || !endTime) {
-                alert('Please select both start and end times!');
-                return;
+        function generateTimeSlots(startTime, endTime) {
+            const slots = [];
+            const [startHour, startMin] = startTime.split(':').map(Number);
+            const [endHour, endMin] = endTime.split(':').map(Number);
+            
+            let currentHour = startHour;
+            let currentMin = startMin;
+            
+            while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+                const start = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+                
+                // Add 30 minutes
+                currentMin += 30;
+                if (currentMin >= 60) {
+                    currentMin = 0;
+                    currentHour++;
+                }
+                
+                const end = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
+                slots.push({ start, end });
             }
-
-            const container = document.getElementById('timeSlots');
-            const slot = document.createElement('div');
-            slot.className = 'time-slot';
-            slot.innerHTML = `
-                <span>${startTime} - ${endTime}</span>
-                <button class="remove-slot" onclick="this.parentElement.remove()">×</button>
-            `;
-            container.appendChild(slot);
+            
+            return slots;
         }
 
         function generateEventId() {
             return 'event_' + Math.random().toString(36).substr(2, 9);
         }
 
-        function createEvent() {
+        function createNewEvent() {
             const eventName = document.getElementById('eventName').value;
             const creatorName = document.getElementById('creatorName').value;
             const startDate = document.getElementById('startDate').value;
             const endDate = document.getElementById('endDate').value;
-            const timeSlots = Array.from(document.querySelectorAll('.time-slot span')).map(s => {
-                const [start, end] = s.textContent.split(' - ');
-                return { start, end };
-            });
+            const eventStartTime = document.getElementById('eventStartTime').value;
+            const eventEndTime = document.getElementById('eventEndTime').value;
 
-            if (!eventName || !creatorName || !startDate || !endDate || timeSlots.length === 0) {
-                alert('Please fill in all fields and add at least one time slot!');
+            if (!eventName || !creatorName || !startDate || !endDate || !eventStartTime || !eventEndTime) {
+                alert('Please fill in all fields!');
                 return;
             }
 
@@ -652,6 +679,9 @@
                 dates.push(new Date(currentDate).toISOString().split('T')[0]);
                 currentDate.setDate(currentDate.getDate() + 1);
             }
+
+            // Generate time slots
+            const timeSlots = generateTimeSlots(eventStartTime, eventEndTime);
 
             const eventId = generateEventId();
             const event = {
@@ -668,6 +698,7 @@
 
             // Switch to join view and load the event
             document.getElementById('eventId').value = eventId;
+            document.getElementById('participantName').value = creatorName;
             switchView('join');
             loadEvent();
         }
@@ -744,7 +775,7 @@
             // Time slot rows
             event.timeSlots.forEach(slot => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td class="time-label">${slot.start} - ${slot.end}</td>`;
+                row.innerHTML = `<td class="time-label">${slot.start}</td>`;
                 
                 event.dates.forEach(date => {
                     const cellId = `${date}_${slot.start}`;
@@ -763,29 +794,79 @@
                         td.classList.add('selected');
                     } else if (availableCount > 0) {
                         td.classList.add('available');
-                        td.style.opacity = 0.3 + (availableCount / event.participants.length) * 0.7;
+                        td.style.opacity = 0.3 + (availableCount / Math.max(event.participants.length, 1)) * 0.7;
                     }
                     
                     if (availableCount > 0 || isSelected) {
-                        td.innerHTML = `
+                        const content = document.createElement('div');
+                        content.className = 'cell-content';
+                        content.innerHTML = `
                             <div>${availableCount > 0 ? availableCount : '✓'}</div>
-                            <div class="availability-count">${availableCount > 0 ? 'available' : ''}</div>
+                            ${availableCount > 0 ? `<div class="availability-count">avail</div>` : ''}
                         `;
+                        td.appendChild(content);
                     }
                     
-                    td.onclick = () => toggleSlot(cellId);
+                    // Mouse events for dragging
+                    td.addEventListener('mousedown', (e) => handleMouseDown(e, cellId));
+                    td.addEventListener('mouseenter', (e) => handleMouseEnter(e, cellId));
+                    td.addEventListener('mouseup', handleMouseUp);
+                    
+                    // Touch events for mobile
+                    td.addEventListener('touchstart', (e) => {
+                        e.preventDefault();
+                        handleMouseDown(e, cellId);
+                    });
+                    td.addEventListener('touchmove', (e) => {
+                        e.preventDefault();
+                        const touch = e.touches[0];
+                        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                        if (element && element.dataset.cell) {
+                            handleMouseEnter(e, element.dataset.cell);
+                        }
+                    });
+                    td.addEventListener('touchend', handleMouseUp);
+                    
                     row.appendChild(td);
                 });
                 
                 table.appendChild(row);
             });
+
+            // Add global mouse up listener
+            document.addEventListener('mouseup', handleMouseUp);
         }
 
-        function toggleSlot(cellId) {
-            if (selectedSlots.has(cellId)) {
+        function handleMouseDown(e, cellId) {
+            isDragging = true;
+            // Determine if we're selecting or deselecting based on current state
+            dragMode = selectedSlots.has(cellId) ? 'deselect' : 'select';
+            toggleSlot(cellId, dragMode);
+        }
+
+        function handleMouseEnter(e, cellId) {
+            if (isDragging) {
+                toggleSlot(cellId, dragMode);
+            }
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+            dragMode = null;
+        }
+
+        function toggleSlot(cellId, mode = null) {
+            if (mode === 'select') {
+                selectedSlots.add(cellId);
+            } else if (mode === 'deselect') {
                 selectedSlots.delete(cellId);
             } else {
-                selectedSlots.add(cellId);
+                // Toggle mode (for click without drag)
+                if (selectedSlots.has(cellId)) {
+                    selectedSlots.delete(cellId);
+                } else {
+                    selectedSlots.add(cellId);
+                }
             }
             displayEvent(currentEvent); // Refresh display
         }
