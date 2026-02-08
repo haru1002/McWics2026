@@ -547,58 +547,44 @@
         */
 
         // Simulated database (replace with MongoDB API calls)
+        // Replace the ENTIRE DatabaseService class with this:
         class DatabaseService {
             constructor() {
-                // In production, this would be replaced with MongoDB API endpoints
-                this.storageKey = 'mustKetchupEvents';
+                this.API_BASE = 'http://localhost:3000/api';
             }
 
-            // CREATE - Save new event (would be POST /api/events)
+            // CREATE - Save new event
             async saveEvent(event) {
-                const events = this.getAllEvents();
-                events[event.eventId] = event;
-                localStorage.setItem(this.storageKey, JSON.stringify(events));
-                return event;
-            }
-
-            // READ - Get event by ID (would be GET /api/events/:id)
-            async getEvent(eventId) {
-                const events = this.getAllEvents();
-                return events[eventId] || null;
-            }
-
-            // UPDATE - Update event (would be PUT /api/events/:id)
-            async updateEvent(eventId, updatedData) {
-                const events = this.getAllEvents();
-                if (events[eventId]) {
-                    events[eventId] = { ...events[eventId], ...updatedData };
-                    localStorage.setItem(this.storageKey, JSON.stringify(events));
-                    return events[eventId];
-                }
-                return null;
-            }
-
-            // Helper to get all events
-            getAllEvents() {
-                const data = localStorage.getItem(this.storageKey);
-                return data ? JSON.parse(data) : {};
-            }
-
-            // Add participant availability (would be POST /api/events/:id/availability)
-            async addParticipantAvailability(eventId, participantName, availability) {
-                const event = await this.getEvent(eventId);
-                if (!event) return null;
-
-                // Remove existing participant if updating
-                event.participants = event.participants.filter(p => p.name !== participantName);
-                
-                // Add new participant data
-                event.participants.push({
-                    name: participantName,
-                    availability: availability
+                const response = await fetch(`${this.API_BASE}/events`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(event)
                 });
+                return await response.json();
+            }
 
-                return await this.updateEvent(eventId, event);
+            // READ - Get event by ID
+            async getEvent(eventId) {
+                const response = await fetch(`${this.API_BASE}/events/${eventId}`);
+                if (response.status === 404) return null;
+                return await response.json();
+            }
+
+            // UPDATE - Add participant availability
+            async addParticipantAvailability(eventId, participantName, availability) {
+                const response = await fetch(`${this.API_BASE}/events/${eventId}/availability`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: participantName,
+                        availability: availability
+                    })
+                });
+                return await response.json();
             }
         }
 
@@ -657,7 +643,52 @@
             return 'event_' + Math.random().toString(36).substr(2, 9);
         }
 
-        function createNewEvent() {
+        // function createNewEvent() {
+        //     const eventName = document.getElementById('eventName').value;
+        //     const creatorName = document.getElementById('creatorName').value;
+        //     const startDate = document.getElementById('startDate').value;
+        //     const endDate = document.getElementById('endDate').value;
+        //     const eventStartTime = document.getElementById('eventStartTime').value;
+        //     const eventEndTime = document.getElementById('eventEndTime').value;
+
+        //     if (!eventName || !creatorName || !startDate || !endDate || !eventStartTime || !eventEndTime) {
+        //         alert('Please fill in all fields!');
+        //         return;
+        //     }
+
+        //     // Generate dates array
+        //     const dates = [];
+        //     let currentDate = new Date(startDate);
+        //     const lastDate = new Date(endDate);
+            
+        //     while (currentDate <= lastDate) {
+        //         dates.push(new Date(currentDate).toISOString().split('T')[0]);
+        //         currentDate.setDate(currentDate.getDate() + 1);
+        //     }
+
+        //     // Generate time slots
+        //     const timeSlots = generateTimeSlots(eventStartTime, eventEndTime);
+
+        //     const eventId = generateEventId();
+        //     const event = {
+        //         eventId,
+        //         eventName,
+        //         creatorName,
+        //         dates,
+        //         timeSlots,
+        //         participants: [],
+        //         createdAt: new Date().toISOString()
+        //     };
+
+        //     db.saveEvent(event);
+
+        //     // Switch to join view and load the event
+        //     document.getElementById('eventId').value = eventId;
+        //     document.getElementById('participantName').value = creatorName;
+        //     switchView('join');
+        //     loadEvent();
+        // }
+        async function createNewEvent() {
             const eventName = document.getElementById('eventName').value;
             const creatorName = document.getElementById('creatorName').value;
             const startDate = document.getElementById('startDate').value;
@@ -690,17 +721,25 @@
                 creatorName,
                 dates,
                 timeSlots,
-                participants: [],
-                createdAt: new Date().toISOString()
+                participants: []
             };
 
-            db.saveEvent(event);
-
-            // Switch to join view and load the event
-            document.getElementById('eventId').value = eventId;
-            document.getElementById('participantName').value = creatorName;
-            switchView('join');
-            loadEvent();
+            try {
+                const result = await db.saveEvent(event);
+                
+                if (result.success) {
+                    // Switch to join view and load the event
+                    document.getElementById('eventId').value = eventId;
+                    document.getElementById('participantName').value = creatorName;
+                    switchView('join');
+                    await loadEvent();
+                } else {
+                    alert('Failed to create event: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to connect to server. Make sure Flask is running on port 3000.');
+            }
         }
 
         async function loadEvent() {
@@ -871,27 +910,58 @@
             displayEvent(currentEvent); // Refresh display
         }
 
+        // async function saveAvailability() {
+        //     const availability = Array.from(selectedSlots).map(slot => {
+        //         const [date, time] = slot.split('_');
+        //         return { date, time };
+        //     });
+
+        //     await db.addParticipantAvailability(
+        //         currentEvent.eventId,
+        //         currentParticipant,
+        //         availability
+        //     );
+
+        //     // Reload event to show updated data
+        //     currentEvent = await db.getEvent(currentEvent.eventId);
+        //     displayEvent(currentEvent);
+
+        //     // Show success message
+        //     const successMsg = document.getElementById('successMessage');
+        //     successMsg.textContent = '✅ Your availability has been saved!';
+        //     successMsg.classList.remove('hidden');
+        //     setTimeout(() => successMsg.classList.add('hidden'), 3000);
+        // }
         async function saveAvailability() {
             const availability = Array.from(selectedSlots).map(slot => {
                 const [date, time] = slot.split('_');
                 return { date, time };
             });
 
-            await db.addParticipantAvailability(
-                currentEvent.eventId,
-                currentParticipant,
-                availability
-            );
+            try {
+                const result = await db.addParticipantAvailability(
+                    currentEvent.eventId,
+                    currentParticipant,
+                    availability
+                );
 
-            // Reload event to show updated data
-            currentEvent = await db.getEvent(currentEvent.eventId);
-            displayEvent(currentEvent);
+                if (result.success) {
+                    // Reload event to show updated data
+                    currentEvent = await db.getEvent(currentEvent.eventId);
+                    displayEvent(currentEvent);
 
-            // Show success message
-            const successMsg = document.getElementById('successMessage');
-            successMsg.textContent = '✅ Your availability has been saved!';
-            successMsg.classList.remove('hidden');
-            setTimeout(() => successMsg.classList.add('hidden'), 3000);
+                    // Show success message
+                    const successMsg = document.getElementById('successMessage');
+                    successMsg.textContent = '✅ Your availability has been saved!';
+                    successMsg.classList.remove('hidden');
+                    setTimeout(() => successMsg.classList.add('hidden'), 3000);
+                } else {
+                    alert('Failed to save: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to save availability. Check your connection.');
+            }
         }
 
         function copyShareLink() {
