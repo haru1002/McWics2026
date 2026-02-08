@@ -92,6 +92,11 @@
                     <input type="text" id="participantName" placeholder="Enter your name">
                 </div>
 
+                <div class="input-group">
+                    <label>Your Email</label>
+                    <input type="email" id="participantEmail" placeholder="Enter your email">
+                </div>
+
                 <button class="primary" onclick="loadEvent()">
                     🔍 Load Event
                 </button>
@@ -193,7 +198,7 @@
             }
 
             // UPDATE - Add participant availability
-            async addParticipantAvailability(eventId, participantName, availability) {
+            async addParticipantAvailability(eventId, participantName, participantEmail, availability) {
                 const response = await fetch(`${this.API_BASE}/events/${eventId}/availability`, {
                     method: 'POST',
                     headers: {
@@ -201,6 +206,7 @@
                     },
                     body: JSON.stringify({
                         name: participantName,
+                        email: participantEmail,
                         availability: availability
                     })
                 });
@@ -211,6 +217,7 @@
         const db = new DatabaseService();
         let currentEvent = null;
         let currentParticipant = null;
+        let currentParticipantEmail = null;
         let selectedSlots = new Set();
         let isDragging = false;
         let dragMode = null; // 'select' or 'deselect'
@@ -328,9 +335,10 @@
         async function loadEvent() {
             const eventId = document.getElementById('eventId').value;
             const participantName = document.getElementById('participantName').value;
+            const participantEmail = document.getElementById('participantEmail').value;
 
-            if (!eventId || !participantName) {
-                alert('Please enter both event ID and your name!');
+            if (!eventId || !participantName || !participantEmail) {
+                alert('Please enter event ID, your name, and your email!');
                 return;
             }
 
@@ -342,10 +350,10 @@
 
             currentEvent = event;
             currentParticipant = participantName;
+            currentParticipantEmail = participantEmail;
             selectedSlots.clear();
 
-            // Load existing availability for this participant
-            const existingParticipant = event.participants.find(p => p.name === participantName);
+            const existingParticipant = event.participants.find(p => p.name === participantName || p.email === participantEmail);
             if (existingParticipant) {
                 existingParticipant.availability.forEach(slot => {
                     selectedSlots.add(`${slot.date}_${slot.time}`);
@@ -494,6 +502,11 @@
         }
 
         async function saveAvailability() {
+            if (!currentParticipantEmail) {
+                alert('Please enter your email!');
+                return;
+            }
+
             const availability = Array.from(selectedSlots).map(slot => {
                 const [date, time] = slot.split('_');
                 return { date, time };
@@ -503,6 +516,7 @@
                 const result = await db.addParticipantAvailability(
                     currentEvent.eventId,
                     currentParticipant,
+                    currentParticipantEmail,
                     availability
                 );
 
