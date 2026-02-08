@@ -10,9 +10,8 @@ from datetime import datetime
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Allow frontend requests
+CORS(app)
 
-# MongoDB Connection
 client = MongoClient(os.getenv("MONGODB_URI"))
 db = client[os.getenv("DATABASE_NAME")]
 events_collection = db["events"]
@@ -21,12 +20,10 @@ events_collection = db["events"]
 def home():
     return "Must Ketchup Backend is running!"
 
-# 1. CREATE new event
 @app.route('/api/events', methods=['POST'])
 def create_event():
     data = request.json
     
-    # Generate eventId if not provided
     if 'eventId' not in data:
         import random
         import string
@@ -35,7 +32,6 @@ def create_event():
     data['createdAt'] = datetime.utcnow()
     data['updatedAt'] = datetime.utcnow()
     
-    # Insert into MongoDB
     result = events_collection.insert_one(data)
     
     return jsonify({
@@ -44,7 +40,6 @@ def create_event():
         "message": "Event created successfully!"
     })
 
-# 2. GET event by ID
 @app.route('/api/events/<event_id>', methods=['GET'])
 def get_event(event_id):
     event = events_collection.find_one({"eventId": event_id})
@@ -54,7 +49,6 @@ def get_event(event_id):
     
     return dumps(event)
 
-# 3. UPDATE event (add participant availability)
 @app.route('/api/events/<event_id>/availability', methods=['POST'])
 def update_availability(event_id):
     data = request.json
@@ -62,24 +56,20 @@ def update_availability(event_id):
     participant_email = data.get('email')
     availability = data.get('availability', [])
     
-    # Find the event
     event = events_collection.find_one({"eventId": event_id})
     
     if not event:
         return jsonify({"success": False, "error": "Event not found"}), 404
     
-    # Remove existing participant if updating
     participants = event.get('participants', [])
     participants = [p for p in participants if p['name'] != participant_name]
     
-    # Add updated participant
     participants.append({
         "name": participant_name,
         "email": participant_email,
         "availability": availability
     })
     
-    # Update in MongoDB
     events_collection.update_one(
         {"eventId": event_id},
         {
@@ -95,7 +85,6 @@ def update_availability(event_id):
         "message": "Availability updated!"
     })
 
-# 4. GET all events (optional, for debugging)
 @app.route('/api/events', methods=['GET'])
 def get_all_events():
     events = list(events_collection.find({}))

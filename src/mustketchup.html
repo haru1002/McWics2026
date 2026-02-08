@@ -153,16 +153,6 @@
                     <input type="text" id="confirmAddress" placeholder="e.g., 123 Main St, Cityville">
                 </div>
 
-                <div class="input-group">
-                    <label>Restaurant Phone Number</label>
-                    <input type="text" id="confirmPhone" placeholder="e.g., +1 234 567 8901">
-                </div>
-
-                <div class="input-group">
-                    <label>Your Email</label>
-                    <input type="email" id="confirmEmail" placeholder="last.first@mail.mcgill.ca">
-                </div>
-
                 <button class="primary" onclick="submitConfirmation()">
                     ✅ Confirm Reservation
                 </button>
@@ -178,7 +168,6 @@
                 this.API_BASE = 'http://localhost:3000/api';
             }
 
-            // CREATE - Save new event
             async saveEvent(event) {
                 const response = await fetch(`${this.API_BASE}/events`, {
                     method: 'POST',
@@ -189,15 +178,12 @@
                 });
                 return await response.json();
             }
-
-            // READ - Get event by ID
             async getEvent(eventId) {
                 const response = await fetch(`${this.API_BASE}/events/${eventId}`);
                 if (response.status === 404) return null;
                 return await response.json();
             }
 
-            // UPDATE - Add participant availability
             async addParticipantAvailability(eventId, participantName, participantEmail, availability) {
                 const response = await fetch(`${this.API_BASE}/events/${eventId}/availability`, {
                     method: 'POST',
@@ -220,7 +206,7 @@
         let currentParticipantEmail = null;
         let selectedSlots = new Set();
         let isDragging = false;
-        let dragMode = null; // 'select' or 'deselect'
+        let dragMode = null; 
 
         function switchView(view) {
             const createView = document.getElementById('createView');
@@ -260,7 +246,6 @@
             while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
                 const start = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
                 
-                // Add 30 minutes
                 currentMin += 30;
                 if (currentMin >= 60) {
                     currentMin = 0;
@@ -291,7 +276,6 @@
                 return;
             }
 
-            // Generate dates array
             const dates = [];
             let currentDate = new Date(startDate);
             const lastDate = new Date(endDate);
@@ -300,8 +284,6 @@
                 dates.push(new Date(currentDate).toISOString().split('T')[0]);
                 currentDate.setDate(currentDate.getDate() + 1);
             }
-
-            // Generate time slots
             const timeSlots = generateTimeSlots(eventStartTime, eventEndTime);
 
             const eventId = generateEventId();
@@ -318,7 +300,6 @@
                 const result = await db.saveEvent(event);
                 
                 if (result.success) {
-                    // Switch to join view and load the event
                     document.getElementById('eventId').value = eventId;
                     document.getElementById('participantName').value = creatorName;
                     switchView('join');
@@ -367,7 +348,6 @@
             document.getElementById('displayEventName').textContent = event.eventName;
             document.getElementById('eventDetails').classList.remove('hidden');
             
-            // Display participants
             const participantList = document.getElementById('participantList');
             participantList.innerHTML = event.participants.map(p => `
                 <div class="participant">
@@ -376,10 +356,8 @@
                 </div>
             `).join('');
 
-            // Create schedule grid
             createScheduleGrid(event);
 
-            // Set share link
             const shareLink = `${window.location.origin}${window.location.pathname}?event=${event.eventId}`;
             document.getElementById('shareLink').value = shareLink;
         }
@@ -388,7 +366,6 @@
             const table = document.getElementById('scheduleTable');
             table.innerHTML = '';
 
-            // Header row with dates
             const headerRow = document.createElement('tr');
             headerRow.innerHTML = '<th>Time</th>';
             event.dates.forEach(date => {
@@ -402,7 +379,6 @@
             });
             table.appendChild(headerRow);
 
-            // Time slot rows
             event.timeSlots.forEach(slot => {
                 const row = document.createElement('tr');
                 row.innerHTML = `<td class="time-label">${slot.start}</td>`;
@@ -411,7 +387,6 @@
                     const cellId = `${date}_${slot.start}`;
                     const isSelected = selectedSlots.has(cellId);
                     
-                    // Calculate how many people are available
                     const availableCount = event.participants.filter(p => 
                         p.availability.some(a => a.date === date && a.time === slot.start)
                     ).length;
@@ -437,12 +412,10 @@
                         td.appendChild(content);
                     }
                     
-                    // Mouse events for dragging
                     td.addEventListener('mousedown', (e) => handleMouseDown(e, cellId));
                     td.addEventListener('mouseenter', (e) => handleMouseEnter(e, cellId));
                     td.addEventListener('mouseup', handleMouseUp);
                     
-                    // Touch events for mobile
                     td.addEventListener('touchstart', (e) => {
                         e.preventDefault();
                         handleMouseDown(e, cellId);
@@ -463,13 +436,11 @@
                 table.appendChild(row);
             });
 
-            // Add global mouse up listener
             document.addEventListener('mouseup', handleMouseUp);
         }
 
         function handleMouseDown(e, cellId) {
             isDragging = true;
-            // Determine if we're selecting or deselecting based on current state
             dragMode = selectedSlots.has(cellId) ? 'deselect' : 'select';
             toggleSlot(cellId, dragMode);
         }
@@ -491,14 +462,13 @@
             } else if (mode === 'deselect') {
                 selectedSlots.delete(cellId);
             } else {
-                // Toggle mode (for click without drag)
                 if (selectedSlots.has(cellId)) {
                     selectedSlots.delete(cellId);
                 } else {
                     selectedSlots.add(cellId);
                 }
             }
-            displayEvent(currentEvent); // Refresh display
+            displayEvent(currentEvent);
         }
 
         async function saveAvailability() {
@@ -521,11 +491,9 @@
                 );
 
                 if (result.success) {
-                    // Reload event to show updated data
                     currentEvent = await db.getEvent(currentEvent.eventId);
                     displayEvent(currentEvent);
 
-                    // Show success message
                     const successMsg = document.getElementById('successMessage');
                     successMsg.textContent = 'Your availability has been saved!';
                     successMsg.classList.remove('hidden');
@@ -576,7 +544,6 @@
                 switchView('join');
             }
 
-            // Set default dates
             const today = new Date();
             const nextWeek = new Date(today);
             nextWeek.setDate(today.getDate() + 7);
